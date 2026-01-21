@@ -16,12 +16,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
 
   <script>
-    // URL del tuo foglio Google (CSV)
     const GLOBAL_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRo9ZeS6loicyVFU04pA29n5GxEeg3q7teyh2-Tsd4DUPzwjNyQsPE4OBwG7WF14rSdxbPeTn594i1D/pub?gid=1262492233&single=true&output=csv';
   </script>
 
   <style>
-    :root { --c-oro: #bfa100; --c-accento: #27ae60; --c-testo: #2c3e50; }
+    :root { --c-oro: #bfa100; --c-accento: #27ae60; --c-testo: #2c3e50; --c-errore: #e74c3c; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { margin: 0; font-family: 'Inter', sans-serif; background: #fdfbf7; color: var(--c-testo); overflow-x: hidden; }
     
@@ -35,20 +34,9 @@
     .header { padding: 15px; text-align: center; border-bottom: 3px solid var(--c-oro); background: white; position: sticky; top: 0; z-index: 100; }
     .topic-title { font-family: 'Cinzel', serif; color: var(--c-oro); margin: 0; font-size: clamp(1.1rem, 4vw, 1.8rem); }
 
-    /* AREA SCROLLABILE */
-    #main-game-area { 
-      padding: 70px 0; 
-      overflow-x: auto; 
-      white-space: nowrap;
-      -webkit-overflow-scrolling: touch; 
-    }
-
+    #main-game-area { padding: 70px 0; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
     .track-wrapper { display: inline-block; min-width: 100%; position: relative; padding: 0 40px; }
-
-    .track { 
-      position: relative; height: 70px; background: #eee; border-radius: 35px; 
-      margin: 40px 0; display: flex; align-items: center; border: 1px solid rgba(0,0,0,0.1); 
-    }
+    .track { position: relative; height: 70px; background: #eee; border-radius: 35px; margin: 40px 0; display: flex; align-items: center; border: 1px solid rgba(0,0,0,0.1); }
     
     .avatar { position: absolute; font-size: 38px; transition: all 0.8s ease; transform: scaleX(-1); top: -45px; z-index: 15; }
     .stations { display: flex; justify-content: space-between; width: 100%; z-index: 10; position: relative; padding: 0 10px; }
@@ -62,9 +50,12 @@
     .node.future { opacity: 0.2; cursor: not-allowed; }
 
     #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 3000; }
-    #modal-content { background: white; padding: 20px; border-radius: 15px; width: 92%; max-width: 550px; text-align: center; max-height: 90vh; overflow-y: auto; }
+    #modal-content { background: white; padding: 20px; border-radius: 15px; width: 92%; max-width: 550px; text-align: center; max-height: 90vh; overflow-y: auto; transition: transform 0.1s; }
     
     .btn { background: var(--c-oro); color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; margin: 8px auto; width: 100%; max-width: 400px; display: block; font-size: 1rem; }
+    .btn:active { transform: scale(0.98); }
+
+    #feedback-msg { color: var(--c-errore); font-weight: bold; margin-top: 15px; min-height: 1.2em; }
 
     #report-area { display: none; padding: 15px; background: white; }
     .table-container { overflow-x: auto; margin-top: 15px; }
@@ -118,7 +109,12 @@
     </div>
   </div>
 
-  <div id="modal-overlay"><div id="modal-content"><div id="quiz-container"></div></div></div>
+  <div id="modal-overlay">
+    <div id="modal-content">
+      <div id="quiz-container"></div>
+      <div id="feedback-msg"></div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
@@ -151,7 +147,7 @@
           img: v[8], spiegazione: v[12]
         }));
         render();
-      } catch (e) { alert("Errore caricamento dati CSV."); }
+      } catch (e) { console.error(e); }
     }
 
     function render() {
@@ -159,7 +155,7 @@
       const track = document.getElementById('dynamic-track');
       container.innerHTML = '';
       
-      const nodeWidth = 80; 
+      const nodeWidth = 85; 
       const trackWidth = Math.max(window.innerWidth - 80, TOTAL_LEVELS * nodeWidth);
       track.style.width = trackWidth + 'px';
 
@@ -178,7 +174,7 @@
       document.getElementById('progress-text').innerText = `${solved}/${TOTAL_LEVELS}`;
       
       const step = trackWidth / (TOTAL_LEVELS > 1 ? TOTAL_LEVELS - 1 : 1);
-      const tPos = (solved === TOTAL_LEVELS) ? trackWidth - 25 : (solved * (trackWidth / TOTAL_LEVELS));
+      const tPos = (solved === TOTAL_LEVELS) ? trackWidth - 30 : (solved * (trackWidth / TOTAL_LEVELS));
       const aPos = (solved === 0) ? -20 : (solved - 1) * (trackWidth / TOTAL_LEVELS);
 
       document.getElementById('tortoise').style.left = tPos + 'px';
@@ -190,6 +186,8 @@
     function openQuiz(day) {
       const d = adventData[day-1];
       const cont = document.getElementById('quiz-container');
+      document.getElementById('feedback-msg').innerText = ""; 
+      
       let h = `<h3>Sfida ${day}</h3><p style="font-weight:700;">${d.question}</p>`;
       if (d.img) h += `<img src="${d.img}" style="max-width:100%; border-radius:10px; margin-bottom:15px;">`;
       
@@ -219,7 +217,15 @@
         render();
       } else {
         document.getElementById('snd-no').play().catch(()=>{});
-        alert("Riprova! Tentativo: " + attempts);
+        // Feedback visivo invece dell'alert
+        const feedback = document.getElementById('feedback-msg');
+        feedback.innerText = "❌ Risposta errata! Tentativo n. " + attempts;
+        
+        // Effetto vibrazione
+        const modal = document.getElementById('modal-content');
+        modal.style.transform = "translateX(10px)";
+        setTimeout(() => modal.style.transform = "translateX(-10px)", 50);
+        setTimeout(() => modal.style.transform = "translateX(0)", 100);
       }
     }
 
@@ -244,7 +250,6 @@
     };
     document.getElementById('skip-btn').onclick = () => { document.getElementById('video-overlay').remove(); };
 
-    // Registrazione Service Worker per PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js').catch(err => console.log(err));
